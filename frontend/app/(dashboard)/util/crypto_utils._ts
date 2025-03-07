@@ -1,0 +1,95 @@
+// Secure Password Hashing Implementation using only bcrypt
+import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
+
+/**
+ * Hash a password using bcrypt
+ * @param password The plaintext password to hash
+ * @param rounds Number of salt rounds (cost factor, default 12)
+ * @returns A promise that resolves to the hashed password
+ */
+async function hashPassword(password: string, rounds: number = 12): Promise<string> {
+    // bcrypt automatically generates a secure salt and includes it in the hash
+    return bcrypt.hash(password, rounds);
+}
+
+/**
+ * Verify a password against a bcrypt hash
+ * @param password The plaintext password to verify
+ * @param hash The previously generated bcrypt hash
+ * @returns A promise that resolves to true if the password matches
+ */
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+    return bcrypt.compare(password, hash);
+}
+
+/**
+ * Create a new user with a securely hashed master password
+ * @param email User's email
+ * @param fullName User's full name
+ * @param masterPassword User's plaintext master password
+ * @returns A new user object with hashed password
+ */
+async function secureUserCreation(email: string, fullName: string, masterPassword: string) {
+    // Hash the master password using bcrypt
+    const hashedPassword = await hashPassword(masterPassword);
+
+    // Create the user with the hashed password
+    const user = {
+        userId: crypto.randomUUID(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        basicInfo: {
+            email,
+            fullName
+        },
+        security: {
+            masterPassword: hashedPassword,
+            securityQuestions: [],
+            twoFactorAuthentication: [
+                { type: 'app', isEnabled: false }
+            ],
+            recoveryOptions: {}
+        },
+        // Other user fields would go here
+    };
+
+    return user;
+}
+
+/**
+ * Verify a user's master password
+ * @param user User object containing hashed master password
+ * @param attemptedPassword Plaintext password to verify
+ * @returns Promise resolving to true if password matches
+ */
+async function verifyUserPassword(user: any, attemptedPassword: string): Promise<boolean> {
+    return verifyPassword(attemptedPassword, user.security.masterPassword);
+}
+
+/**
+ * Update a user's password securely
+ * @param user User object
+ * @param newPassword New plaintext password
+ * @returns Updated user object
+ */
+async function updateUserPassword(user: any, newPassword: string) {
+    const hashedPassword = await hashPassword(newPassword);
+
+    return {
+        ...user,
+        security: {
+            ...user.security,
+            masterPassword: hashedPassword
+        },
+        updatedAt: new Date()
+    };
+}
+
+export {
+    hashPassword,
+    verifyPassword,
+    secureUserCreation,
+    verifyUserPassword,
+    updateUserPassword
+};
